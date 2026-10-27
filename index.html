@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cotizador Universal V3.3</title>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cotizaciones</title>
 <style>
 :root{
   --bg:#070b14;--bg2:#0a1120;--surface:#0e1728;--surface2:#121d31;--surface3:#0a1322;
@@ -132,8 +132,119 @@ main{padding:28px clamp(18px,3vw,38px) 48px;max-width:1480px;width:100%;margin:0
   #quoteTable .profit{max-width:100%;white-space:normal;text-align:center}
 }
 
+
+/* --- V3.8: partidas adaptadas al ancho REAL del resumen --- */
+#quoteTable{
+  container-type:inline-size;
+  container-name:quoteSummary;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+}
+.quote-lines{min-width:0;max-width:100%}
+.quote-line{
+  min-width:0;
+  max-width:100%;
+}
+.quote-line > *{min-width:0}
+.quote-line > .acts{
+  min-width:0;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.ql-main .title,
+.ql-main .mut{
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+.ql-main .title{
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+}
+
+/* Cuando EL PANEL se estrecha, no importa cuánto mida la ventana. */
+@container quoteSummary (max-width: 900px){
+  .quote-line{
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:10px 12px;
+    align-items:center;
+  }
+  .quote-line .ql-main{
+    grid-column:1 / -1;
+    padding-bottom:9px;
+    border-bottom:1px solid var(--line);
+  }
+  .quote-line .ql-qty{
+    grid-column:1;
+    text-align:left;
+  }
+  .quote-line .ql-price{
+    grid-column:2;
+    text-align:left;
+  }
+  .quote-line .ql-margin{
+    grid-column:3;
+    display:block;
+  }
+  .quote-line .ql-total{
+    grid-column:4;
+    text-align:left;
+  }
+  .quote-line > .acts{
+    grid-column:1 / -1;
+    display:flex;
+    gap:8px;
+    justify-content:flex-end;
+    padding-top:8px;
+    border-top:1px dashed var(--line);
+  }
+  .quote-line > .acts .btn{
+    flex:0 1 auto;
+    max-width:100%;
+  }
+}
+
+/* En panel todavía más angosto: dos columnas claras y acciones completas. */
+@container quoteSummary (max-width: 620px){
+  .quote-line{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  .quote-line .ql-main{grid-column:1 / -1}
+  .quote-line .ql-qty{grid-column:1}
+  .quote-line .ql-price{grid-column:2;text-align:right}
+  .quote-line .ql-margin{grid-column:1}
+  .quote-line .ql-total{grid-column:2;text-align:right}
+  .quote-line > .acts{
+    grid-column:1 / -1;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+  .quote-line > .acts .btn{width:100%}
+}
+
+/* Zoom extremo / móvil pequeño. */
+@container quoteSummary (max-width: 390px){
+  .quote-line{
+    grid-template-columns:1fr!important;
+  }
+  .quote-line .ql-main,
+  .quote-line .ql-qty,
+  .quote-line .ql-price,
+  .quote-line .ql-margin,
+  .quote-line .ql-total,
+  .quote-line > .acts{
+    grid-column:1!important;
+    text-align:left!important;
+  }
+  .quote-line > .acts{
+    grid-template-columns:1fr;
+  }
+}
+
 </style></head><body>
-<div class="app" id="app"><aside><div class="brand"><b id="brand">MI NEGOCIO</b><span>Cotizador Universal · V3.2</span></div><div class="nav">
+<div class="app" id="app"><aside><div class="brand"><b id="brand">MI NEGOCIO</b><span>Cotizaciones</span></div><div class="nav">
 <button class="active" data-view="cotizador">▦&nbsp;&nbsp; Cotizar</button><button data-view="historial">◷&nbsp;&nbsp; Historial</button><button data-view="productos">◫&nbsp;&nbsp; Productos</button><button data-view="materiales">◇&nbsp;&nbsp; Materiales</button><button data-view="clientes">◎&nbsp;&nbsp; Clientes</button><button data-view="config">⚙&nbsp;&nbsp; Configuración</button><button data-view="datos">⇄&nbsp;&nbsp; Datos</button></div><div class="sidebar-foot"><div class="local-status"><span class="dotlocal"></span><div><b id="saveState">Guardado localmente</b><span>Tus datos permanecen en este navegador.</span></div></div></div></aside><main>
 <section id="view-cotizador" class="view active">
 <div class="top"><div><h1>Nueva cotización</h1><p>Cotiza rápido, controla el margen y comparte una propuesta clara con tu cliente.</p></div><div class="acts no-print"><label class="switchline"><input id="clientMode" type="checkbox"> Modo cliente</label><button class="btn sec" onclick="newQuote()">＋ Nueva cotización</button></div></div>
