@@ -18,7 +18,7 @@ aside{position:sticky;top:0;height:100vh;padding:18px 14px 16px;background:rgba(
 .sidebar-foot{margin-top:auto;padding:12px 10px 2px}.local-status{display:flex;gap:9px;align-items:flex-start;padding:11px;border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:13px}.local-status .dotlocal{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px var(--ok-soft);margin-top:4px;flex:0 0 auto}.local-status b{display:block;font-size:11px}.local-status span{display:block;color:var(--muted);font-size:10px;line-height:1.35;margin-top:2px}#saveState{transition:.2s}
 main{padding:28px clamp(18px,3vw,38px) 48px;max-width:1480px;width:100%;margin:0 auto;min-width:0}.view{display:none;animation:viewIn .22s ease}.view.active{display:block}@keyframes viewIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:22px}.top h1{margin:0;font-size:clamp(25px,3vw,34px);letter-spacing:-.035em;line-height:1.05}.top p{margin:7px 0 0;color:var(--muted);font-size:13px;line-height:1.5}.top .acts{justify-content:flex-end}
-.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:17px}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:17px}.c4{grid-column:span 4}.c5{grid-column:span 5;min-width:0}.c6{grid-column:span 6}.c7{grid-column:span 7;min-width:0}.c8{grid-column:span 8}.c12{grid-column:span 12}
 .card{background:linear-gradient(180deg,rgba(15,24,41,.97),rgba(12,20,35,.97));border:1px solid rgba(255,255,255,.075);border-radius:var(--radius);padding:19px;min-width:0;box-shadow:0 1px 0 rgba(255,255,255,.02),var(--shadow)}.card h3{margin:0 0 14px;font-size:15px;letter-spacing:-.01em}.card.soft{box-shadow:none;background:rgba(14,23,40,.75)}
 .form,.stack{display:grid;gap:12px}.r2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.r3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}label{display:block;color:#9dabc0;font-size:11px;font-weight:760;margin-bottom:6px;letter-spacing:.01em}input,select,textarea{width:100%;min-width:0;height:44px;background:#091322;border:1px solid var(--line);border-radius:11px;color:#fff;padding:0 12px;outline:none;transition:border .18s,box-shadow .18s,background .18s}textarea{height:auto;min-height:88px;padding-top:11px;resize:vertical}input::placeholder,textarea::placeholder{color:#53627a}input:hover,select:hover,textarea:hover{border-color:#344762}input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(120,132,255,.11);background:#0a1526}input[type=checkbox]{height:auto;accent-color:var(--accent)}input[type=file]{height:auto;padding:10px}
 .btn{border:1px solid transparent;border-radius:11px;background:linear-gradient(180deg,#7e89ff,#6874f2);color:#fff;min-height:40px;padding:9px 14px;font-weight:820;cursor:pointer;box-shadow:0 8px 20px rgba(89,101,230,.18);transition:.16s ease}.btn:hover{transform:translateY(-1px);filter:brightness(1.05)}.btn:active{transform:translateY(0)}.btn.sec{background:#111d31;border-color:var(--line);color:#dbe4f2;box-shadow:none}.btn.sec:hover{border-color:#3a4b68;background:#152239}.btn.ok{background:linear-gradient(180deg,#38d8b0,#28b994);color:#041b15;box-shadow:0 8px 20px rgba(49,208,170,.16)}.btn.danger{background:transparent;border-color:#5d2d39;color:#ff9da7;box-shadow:none}.btn.danger:hover{background:var(--danger-soft);border-color:#82404e}.btn.sm{min-height:32px;padding:6px 9px;font-size:11px;border-radius:9px}.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.acts .btn{white-space:nowrap}
@@ -43,6 +43,95 @@ main{padding:28px clamp(18px,3vw,38px) 48px;max-width:1480px;width:100%;margin:0
 
 .templ.obtype{transition:.15s ease}.templ.obtype:hover{border-color:var(--accent)}
 .btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid rgba(120,132,255,.7);outline-offset:2px}
+
+/* --- V3.7: resumen de cotización realmente responsivo --- */
+#quoteTable{min-width:0;max-width:100%;overflow:hidden}
+#quoteTable .tablewrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+#quoteTable table{width:100%;min-width:0;table-layout:auto}
+#quoteTable th,#quoteTable td{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word;white-space:normal}
+#quoteTable td:first-child{min-width:0}
+#quoteTable .actions,#quoteTable .acts{min-width:0;flex-wrap:wrap}
+
+/* A partir de zoom alto / viewport estrecho, cada partida se convierte en tarjeta. */
+@media (max-width: 880px){
+  #quoteTable .tablewrap{
+    overflow:visible;
+    border:0;
+    background:transparent;
+  }
+  #quoteTable table,
+  #quoteTable thead,
+  #quoteTable tbody,
+  #quoteTable tr,
+  #quoteTable th,
+  #quoteTable td{
+    display:block;
+    width:100%;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  #quoteTable table{border-collapse:separate;min-width:0!important}
+  #quoteTable thead{display:none}
+  #quoteTable tbody{display:grid;gap:10px}
+  #quoteTable tr{
+    background:var(--panel3);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px;
+    overflow:hidden;
+  }
+  #quoteTable td{
+    border:0;
+    padding:5px 0;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+  #quoteTable td:nth-child(1){
+    padding-bottom:9px;
+    margin-bottom:4px;
+    border-bottom:1px solid var(--line);
+  }
+  #quoteTable td:nth-child(2),
+  #quoteTable td:nth-child(3),
+  #quoteTable td:nth-child(4),
+  #quoteTable td:nth-child(5){
+    display:grid;
+    grid-template-columns:minmax(90px,auto) minmax(0,1fr);
+    gap:10px;
+    align-items:center;
+  }
+  #quoteTable td:nth-child(2)::before{content:"Cantidad";color:var(--muted);font-size:11px;font-weight:700}
+  #quoteTable td:nth-child(3)::before{content:"Unitario";color:var(--muted);font-size:11px;font-weight:700}
+  #quoteTable td:nth-child(4)::before{content:"Margen";color:var(--muted);font-size:11px;font-weight:700}
+  #quoteTable td:nth-child(5)::before{content:"Total";color:var(--muted);font-size:11px;font-weight:700}
+  #quoteTable td:last-child{
+    display:block;
+    padding-top:10px;
+    margin-top:5px;
+    border-top:1px dashed var(--line);
+  }
+  #quoteTable td:last-child .actions,
+  #quoteTable td:last-child .acts{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+  }
+  #quoteTable td:last-child .btn{width:100%}
+}
+
+/* Incluso con zoom muy alto, evita que columnas auxiliares rompan el ancho. */
+@media (max-width: 520px){
+  #quoteTable td:nth-child(2),
+  #quoteTable td:nth-child(3),
+  #quoteTable td:nth-child(4),
+  #quoteTable td:nth-child(5){
+    grid-template-columns:82px minmax(0,1fr);
+  }
+  #quoteTable td:last-child .actions,
+  #quoteTable td:last-child .acts{grid-template-columns:1fr}
+  #quoteTable .profit{max-width:100%;white-space:normal;text-align:center}
+}
+
 </style></head><body>
 <div class="app" id="app"><aside><div class="brand"><b id="brand">MI NEGOCIO</b><span>Cotizador Universal · V3.2</span></div><div class="nav">
 <button class="active" data-view="cotizador">▦&nbsp;&nbsp; Cotizar</button><button data-view="historial">◷&nbsp;&nbsp; Historial</button><button data-view="productos">◫&nbsp;&nbsp; Productos</button><button data-view="materiales">◇&nbsp;&nbsp; Materiales</button><button data-view="clientes">◎&nbsp;&nbsp; Clientes</button><button data-view="config">⚙&nbsp;&nbsp; Configuración</button><button data-view="datos">⇄&nbsp;&nbsp; Datos</button></div><div class="sidebar-foot"><div class="local-status"><span class="dotlocal"></span><div><b id="saveState">Guardado localmente</b><span>Tus datos permanecen en este navegador.</span></div></div></div></aside><main>
