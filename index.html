@@ -805,6 +805,14 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
 <script>
 /* ===== V4 OPERACIÓN: extensión local, sin backend ===== */
 (function(){
+  const ordersList=document.getElementById('ordersList');
+  const orderStatusFilter=document.getElementById('orderStatusFilter');
+  const orderDateFilter=document.getElementById('orderDateFilter');
+  const orderModal=document.getElementById('orderModal');
+  const orderModalBody=document.getElementById('orderModalBody');
+  const omNumber=document.getElementById('omNumber');
+  const omClient=document.getElementById('omClient');
+
   function ensureV4(){
     db.orders=Array.isArray(db.orders)?db.orders:[];
     db.suppliers=Array.isArray(db.suppliers)?db.suppliers:[];
@@ -926,7 +934,8 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
 
   // Pedidos
   window.renderOrders=function(){
-    let sf=document.getElementById('orderStatusFilter'),df=document.getElementById('orderDateFilter');
+    if(!ordersList)return;
+    let sf=orderStatusFilter,df=orderDateFilter;
     let status=sf?sf.value:'',datef=df?df.value:'',now=new Date(),today=now.toISOString().slice(0,10);
     let end=new Date(now.getTime()+7*86400000);
     let arr=db.orders.filter(o=>{
@@ -950,8 +959,8 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
       </div></div>`
     }).join(''):'<div class="empty">No hay pedidos con estos filtros.</div>';
   };
-  if(document.getElementById('orderStatusFilter'))orderStatusFilter.onchange=renderOrders;
-  if(document.getElementById('orderDateFilter'))orderDateFilter.onchange=renderOrders;
+  if(orderStatusFilter)orderStatusFilter.onchange=renderOrders;
+  if(orderDateFilter)orderDateFilter.onchange=renderOrders;
 
   window.deleteOrder=function(id){
     const o=db.orders.find(x=>x.id===id);
@@ -965,8 +974,12 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
   };
 
   window.openOrder=function(id){
-    let o=db.orders.find(x=>x.id===id); if(!o)return;
-    let t=orderTotals(o),c=orderClient(o),cur=o.quote.currency||db.config.currency;
+    const o=db.orders.find(x=>x.id===id);
+    if(!o)return notify('No se encontró el pedido.','warn');
+    if(!o.quote||typeof o.quote!=='object')return notify('Este pedido no contiene una cotización válida.','warn');
+    if(!Array.isArray(o.quote.items))o.quote.items=[];
+    if(!Array.isArray(o.payments))o.payments=[];
+    const t=orderTotals(o),c=orderClient(o),cur=o.quote.currency||db.config.currency;
     omNumber.textContent=o.number; omClient.textContent=c.name+(c.phone?' · '+c.phone:'');
     let depositReq=t.total*(Number(o.quote.deposit??db.config.deposit)||0)/100;
     orderModalBody.innerHTML=`
@@ -984,8 +997,7 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
               <div class="title">${esc(i.name)}${i.variant?' · '+esc(i.variant):''}</div>
               <div class="mut">${i.qty} × ${v4Money(i.unitPrice,cur)} · Total ${v4Money(i.subtotal,cur)}</div>
             </div>
-            <button class="btn sec sm" onclick="editOrderLine('${o.id}','${i.id}')">Editar</button>
-          </div>
+            <button class="btn sec sm" onclick="editOrderLine('${o.id}','${i.id}')">Editar</button>          </div>
         </div>`).join('')}
       </div>
       <div class="order-modal-grid">
@@ -1009,10 +1021,13 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
       <hr>
       <div class="notice ${o.actualCost&&o.actualCost>t.estimatedCost?'bad':'good'}">Costo estimado: <b>${v4Money(t.estimatedCost,cur)}</b> · Costo real: <b>${o.actualCost?v4Money(o.actualCost,cur):'Pendiente'}</b>${o.actualCost?` · Diferencia ${v4Money(o.actualCost-t.estimatedCost,cur)}`:''}</div>
     `;
-    omStatus.value=o.status; omUrgency.value=o.urgency||'normal';
+    const statusEl=document.getElementById('omStatus');
+    const urgencyEl=document.getElementById('omUrgency');
+    if(statusEl)statusEl.value=o.status;
+    if(urgencyEl)urgencyEl.value=o.urgency||'normal';
     orderModal.classList.remove('hidden');
   };
-  window.closeOrderModal=function(){orderModal.classList.add('hidden')};
+  window.closeOrderModal=function(){if(orderModal)orderModal.classList.add('hidden')};
   window.editOrderLine=function(orderId,lineId){
     const o=db.orders.find(x=>x.id===orderId);
     if(!o)return notify('No se encontró el pedido.','warn');
@@ -1065,16 +1080,43 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
   };
 
   window.saveOrderDetail=function(id){
-    let o=db.orders.find(x=>x.id===id); if(!o)return;
-    let old=o.status,newStatus=omStatus.value;
-    o.status=newStatus;o.dueDate=omDue.value;o.urgency=omUrgency.value;o.actualCost=Math.max(0,Number(omActual.value)||0);o.clientNotes=omClientNotes.value.trim();o.internalNotes=omInternalNotes.value.trim();
+    const o=db.orders.find(x=>x.id===id);
+    if(!o)return notify('No se encontró el pedido.','warn');
+
+    const statusEl=document.getElementById('omStatus');
+    const dueEl=document.getElementById('omDue');
+    const urgencyEl=document.getElementById('omUrgency');
+    const actualEl=document.getElementById('omActual');
+    const clientNotesEl=document.getElementById('omClientNotes');
+    const internalNotesEl=document.getElementById('omInternalNotes');
+
+    if(!statusEl||!dueEl||!urgencyEl||!actualEl||!clientNotesEl||!internalNotesEl){
+      return notify('No se pudo cargar el formulario del pedido. Cierra y vuelve a abrirlo.','warn');
+    }
+
+    const newStatus=statusEl.value;
+    o.status=newStatus;
+    o.dueDate=dueEl.value;
+    o.urgency=urgencyEl.value;
+    o.actualCost=Math.max(0,Number(actualEl.value)||0);
+    o.clientNotes=clientNotesEl.value.trim();
+    o.internalNotes=internalNotesEl.value.trim();
+
     if(newStatus==='production'&&!o.inventoryApplied)applyOrderInventory(o);
-    save();renderOrders();renderDashboard();openOrder(id);notify('Pedido actualizado.','ok');
+    save();
+    renderOrders();
+    renderDashboard();
+    openOrder(id);
+    notify('Pedido actualizado.','ok');
   };
   window.addPayment=function(id){
-    let o=db.orders.find(x=>x.id===id);if(!o)return;
-    let amount=Number(payAmount.value);if(!(amount>0))return notify('Captura un monto válido.','warn');
-    o.payments.push({id:uid('pay'),amount,method:payMethod.value,ref:payRef.value.trim(),date:new Date().toISOString()});
+    const o=db.orders.find(x=>x.id===id);if(!o)return;
+    const amountEl=document.getElementById('payAmount');
+    const methodEl=document.getElementById('payMethod');
+    const refEl=document.getElementById('payRef');
+    const amount=Number(amountEl?.value);
+    if(!(amount>0))return notify('Captura un monto válido.','warn');
+    o.payments.push({id:uid('pay'),amount,method:methodEl?.value||'Otro',ref:(refEl?.value||'').trim(),date:new Date().toISOString()});
     save();renderOrders();renderDashboard();openOrder(id);
   };
   window.deletePayment=function(oid,pid){
