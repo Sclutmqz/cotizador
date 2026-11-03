@@ -451,6 +451,7 @@ main{padding:28px clamp(18px,3vw,38px) 48px;max-width:1480px;width:100%;margin:0
     <div class="acts"><button class="btn" onclick="saveQuoteLineEdit()">Guardar cambios</button><button class="btn sec" onclick="closeQuoteLineModal()">Cancelar</button></div>
   </div>
 </div>
+</div>
 <div id="orderModal" class="modal hidden"><div class="modalbox" style="width:min(920px,100%)">
   <div class="head"><div><h3 style="margin:0">Pedido <span id="omNumber"></span></h3><div class="mut" id="omClient"></div></div><button class="btn sec sm" onclick="closeOrderModal()">Cerrar</button></div>
   <div id="orderModalBody"></div>
@@ -996,7 +997,6 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
       if(!modal||!body||!numberEl||!clientEl){
         return notify('No se pudo cargar la ventana del pedido. Recarga la página.','warn');
       }
-
       const t=orderTotals(o);
       const c=orderClient(o)||{name:'Sin cliente',phone:''};
       const cur=o.quote.currency||db.config.currency||'MXN';
