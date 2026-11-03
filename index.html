@@ -955,9 +955,16 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
         <div><span class="status-badge ${statusClass(o.status)}">${orderStatusLabel(o.status)}</span></div>
         <div><span class="mut">Total</span><b style="display:block">${v4Money(t.total,o.quote.currency)}</b></div>
         <div><span class="mut">Saldo</span><b style="display:block">${v4Money(t.balance,o.quote.currency)}</b><div class="progressbar"><i style="width:${pct}%"></i></div></div>
-        <div class="order-actions acts"><button class="btn sec sm" onclick="openOrder('${o.id}')">Abrir</button><button class="btn danger sm" onclick="deleteOrder('${o.id}')">Eliminar</button></div>
+        <div class="order-actions acts"><button type="button" class="btn sec sm js-open-order" data-order-id="${esc(o.id)}">Abrir</button><button type="button" class="btn danger sm" onclick="deleteOrder('${o.id}')">Eliminar</button></div>
       </div></div>`
     }).join(''):'<div class="empty">No hay pedidos con estos filtros.</div>';
+    ordersList.querySelectorAll('.js-open-order').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        e.preventDefault();
+        const id=btn.dataset.orderId;
+        window.openOrder(id);
+      });
+    });
   };
   if(orderStatusFilter)orderStatusFilter.onchange=renderOrders;
   if(orderDateFilter)orderDateFilter.onchange=renderOrders;
@@ -974,58 +981,81 @@ function init(){db=norm(db);ensureQuote();fillMat();renderMaterials();renderClie
   };
 
   window.openOrder=function(id){
-    const o=db.orders.find(x=>x.id===id);
-    if(!o)return notify('No se encontró el pedido.','warn');
-    if(!o.quote||typeof o.quote!=='object')return notify('Este pedido no contiene una cotización válida.','warn');
-    if(!Array.isArray(o.quote.items))o.quote.items=[];
-    if(!Array.isArray(o.payments))o.payments=[];
-    const t=orderTotals(o),c=orderClient(o),cur=o.quote.currency||db.config.currency;
-    omNumber.textContent=o.number; omClient.textContent=c.name+(c.phone?' · '+c.phone:'');
-    let depositReq=t.total*(Number(o.quote.deposit??db.config.deposit)||0)/100;
-    orderModalBody.innerHTML=`
-      <div class="kpis" style="margin-bottom:14px">
-        <div class="kpi"><span>Total</span><b>${v4Money(t.total,cur)}</b></div>
-        <div class="kpi"><span>Anticipo requerido</span><b>${v4Money(depositReq,cur)}</b></div>
-        <div class="kpi"><span>Pagado</span><b>${v4Money(t.paid,cur)}</b></div>
-        <div class="kpi"><span>Saldo</span><b>${v4Money(t.balance,cur)}</b></div>
-      </div>
-      <div class="head" style="margin-top:6px"><h3>Resumen del pedido</h3><span class="tag">${(o.quote.items||[]).length} partidas</span></div>
-      <div class="stack" style="margin-bottom:16px">
-        ${(o.quote.items||[]).map(i=>`<div class="mini">
-          <div class="minihead">
-            <div>
-              <div class="title">${esc(i.name)}${i.variant?' · '+esc(i.variant):''}</div>
-              <div class="mut">${i.qty} × ${v4Money(i.unitPrice,cur)} · Total ${v4Money(i.subtotal,cur)}</div>
+    try{
+      const o=db.orders.find(x=>x.id===id);
+      if(!o)return notify('No se encontró el pedido.','warn');
+
+      if(!o.quote||typeof o.quote!=='object')o.quote={items:[],currency:db.config.currency||'MXN',taxRate:Number(db.config.tax)||0,taxEnabled:true,deposit:Number(db.config.deposit)||0};
+      if(!Array.isArray(o.quote.items))o.quote.items=[];
+      if(!Array.isArray(o.payments))o.payments=[];
+
+      const modal=document.getElementById('orderModal');
+      const body=document.getElementById('orderModalBody');
+      const numberEl=document.getElementById('omNumber');
+      const clientEl=document.getElementById('omClient');
+      if(!modal||!body||!numberEl||!clientEl){
+        return notify('No se pudo cargar la ventana del pedido. Recarga la página.','warn');
+      }
+
+      const t=orderTotals(o);
+      const c=orderClient(o)||{name:'Sin cliente',phone:''};
+      const cur=o.quote.currency||db.config.currency||'MXN';
+
+      numberEl.textContent=o.number||'';
+      clientEl.textContent=(c.name||'Sin cliente')+(c.phone?' · '+c.phone:'');
+      const depositReq=t.total*(Number(o.quote.deposit??db.config.deposit)||0)/100;
+
+      body.innerHTML=`
+        <div class="kpis" style="margin-bottom:14px">
+          <div class="kpi"><span>Total</span><b>${v4Money(t.total,cur)}</b></div>
+          <div class="kpi"><span>Anticipo requerido</span><b>${v4Money(depositReq,cur)}</b></div>
+          <div class="kpi"><span>Pagado</span><b>${v4Money(t.paid,cur)}</b></div>
+          <div class="kpi"><span>Saldo</span><b>${v4Money(t.balance,cur)}</b></div>
+        </div>
+        <div class="head" style="margin-top:6px"><h3>Resumen del pedido</h3><span class="tag">${(o.quote.items||[]).length} partidas</span></div>
+        <div class="stack" style="margin-bottom:16px">
+          ${(o.quote.items||[]).map(i=>`<div class="mini">
+            <div class="minihead">
+              <div>
+                <div class="title">${esc(i.name||'Producto')}${i.variant?' · '+esc(i.variant):''}</div>
+                <div class="mut">${Number(i.qty)||0} × ${v4Money(i.unitPrice,cur)} · Total ${v4Money(i.subtotal,cur)}</div>
+              </div>
+              <button type="button" class="btn sec sm" onclick="editOrderLine('${o.id}','${i.id}')">Editar</button>
             </div>
-            <button class="btn sec sm" onclick="editOrderLine('${o.id}','${i.id}')">Editar</button>          </div>
-        </div>`).join('')}
-      </div>
-      <div class="order-modal-grid">
-        <div><label>Estado</label><select id="omStatus"><option value="approved">Aprobado</option><option value="production">En producción</option><option value="finished">Terminado</option><option value="delivered">Entregado</option><option value="cancelled">Cancelado</option></select></div>
-        <div><label>Fecha compromiso</label><input id="omDue" type="date" value="${esc(o.dueDate||'')}"></div>
-        <div><label>Urgencia</label><select id="omUrgency"><option value="normal">Normal</option><option value="high">Urgente</option></select></div>
-        <div><label>Costo real final</label><input id="omActual" type="number" min="0" step=".01" value="${o.actualCost||''}" placeholder="${t.estimatedCost.toFixed(2)}"></div>
-        <div class="full"><label>Notas para cliente</label><textarea id="omClientNotes">${esc(o.clientNotes||'')}</textarea></div>
-        <div class="full"><label>Notas internas / producción</label><textarea id="omInternalNotes">${esc(o.internalNotes||'')}</textarea></div>
-      </div>
-      <div class="acts" style="margin:12px 0 18px"><button class="btn" onclick="saveOrderDetail('${o.id}')">Guardar pedido</button><button class="btn sec" onclick="printProductionOrder('${o.id}')">Orden de producción</button></div>
-      <hr>
-      <div class="head"><h3>Registrar pago</h3><span class="tag">${(o.payments||[]).length} pagos</span></div>
-      <div class="payment-row">
-        <div><label>Monto</label><input id="payAmount" type="number" min="0" step=".01"></div>
-        <div><label>Método</label><select id="payMethod"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></div>
-        <div><label>Referencia</label><input id="payRef"></div>
-        <button class="btn" onclick="addPayment('${o.id}')">Agregar</button>
-      </div>
-      <div class="stack" style="margin-top:12px">${(o.payments||[]).length?o.payments.map(p=>`<div class="mini"><div class="minihead"><div><b>${v4Money(p.amount,cur)}</b><div class="mut">${esc(p.method)} · ${new Date(p.date).toLocaleString('es-MX')} ${p.ref?'· '+esc(p.ref):''}</div></div><button class="btn danger sm" onclick="deletePayment('${o.id}','${p.id}')">Eliminar</button></div></div>`).join(''):'<div class="empty">Sin pagos registrados.</div>'}</div>
-      <hr>
-      <div class="notice ${o.actualCost&&o.actualCost>t.estimatedCost?'bad':'good'}">Costo estimado: <b>${v4Money(t.estimatedCost,cur)}</b> · Costo real: <b>${o.actualCost?v4Money(o.actualCost,cur):'Pendiente'}</b>${o.actualCost?` · Diferencia ${v4Money(o.actualCost-t.estimatedCost,cur)}`:''}</div>
-    `;
-    const statusEl=document.getElementById('omStatus');
-    const urgencyEl=document.getElementById('omUrgency');
-    if(statusEl)statusEl.value=o.status;
-    if(urgencyEl)urgencyEl.value=o.urgency||'normal';
-    orderModal.classList.remove('hidden');
+          </div>`).join('')||'<div class="empty">Este pedido no tiene partidas.</div>'}
+        </div>
+        <div class="order-modal-grid">
+          <div><label>Estado</label><select id="omStatus"><option value="approved">Aprobado</option><option value="production">En producción</option><option value="finished">Terminado</option><option value="delivered">Entregado</option><option value="cancelled">Cancelado</option></select></div>
+          <div><label>Fecha compromiso</label><input id="omDue" type="date" value="${esc(o.dueDate||'')}"></div>
+          <div><label>Urgencia</label><select id="omUrgency"><option value="normal">Normal</option><option value="high">Urgente</option></select></div>
+          <div><label>Costo real final</label><input id="omActual" type="number" min="0" step=".01" value="${o.actualCost||''}" placeholder="${t.estimatedCost.toFixed(2)}"></div>
+          <div class="full"><label>Notas para cliente</label><textarea id="omClientNotes">${esc(o.clientNotes||'')}</textarea></div>
+          <div class="full"><label>Notas internas / producción</label><textarea id="omInternalNotes">${esc(o.internalNotes||'')}</textarea></div>
+        </div>
+        <div class="acts" style="margin:12px 0 18px"><button type="button" class="btn" onclick="saveOrderDetail('${o.id}')">Guardar pedido</button><button type="button" class="btn sec" onclick="printProductionOrder('${o.id}')">Orden de producción</button></div>
+        <hr>
+        <div class="head"><h3>Registrar pago</h3><span class="tag">${(o.payments||[]).length} pagos</span></div>
+        <div class="payment-row">
+          <div><label>Monto</label><input id="payAmount" type="number" min="0" step=".01"></div>
+          <div><label>Método</label><select id="payMethod"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta</option><option>Otro</option></select></div>
+          <div><label>Referencia</label><input id="payRef"></div>
+          <button type="button" class="btn" onclick="addPayment('${o.id}')">Agregar</button>
+        </div>
+        <div class="stack" style="margin-top:12px">${(o.payments||[]).length?o.payments.map(p=>`<div class="mini"><div class="minihead"><div><b>${v4Money(p.amount,cur)}</b><div class="mut">${esc(p.method||'')} · ${new Date(p.date).toLocaleString('es-MX')} ${p.ref?'· '+esc(p.ref):''}</div></div><button type="button" class="btn danger sm" onclick="deletePayment('${o.id}','${p.id}')">Eliminar</button></div></div>`).join(''):'<div class="empty">Sin pagos registrados.</div>'}</div>
+        <hr>
+        <div class="notice ${o.actualCost&&o.actualCost>t.estimatedCost?'bad':'good'}">Costo estimado: <b>${v4Money(t.estimatedCost,cur)}</b> · Costo real: <b>${o.actualCost?v4Money(o.actualCost,cur):'Pendiente'}</b>${o.actualCost?` · Diferencia ${v4Money(o.actualCost-t.estimatedCost,cur)}`:''}</div>
+      `;
+
+      const statusEl=document.getElementById('omStatus');
+      const urgencyEl=document.getElementById('omUrgency');
+      if(statusEl)statusEl.value=o.status||'approved';
+      if(urgencyEl)urgencyEl.value=o.urgency||'normal';
+
+      modal.classList.remove('hidden');
+    }catch(err){
+      console.error('Error al abrir pedido:',err);
+      notify('No se pudo abrir el pedido. Revisa la consola para ver el detalle.','warn');
+    }
   };
   window.closeOrderModal=function(){if(orderModal)orderModal.classList.add('hidden')};
   window.editOrderLine=function(orderId,lineId){
